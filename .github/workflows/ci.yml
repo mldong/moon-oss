@@ -33,7 +33,7 @@ jobs:
     name: Check / Build / Test (wasm + native, live OSS bucket)
     runs-on: ubuntu-latest
     env:
-      EXPECTED_TESTS: "22"
+      EXPECTED_TESTS: "24"
     steps:
       - uses: actions/checkout@v4
 

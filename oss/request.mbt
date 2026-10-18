@@ -83,14 +83,32 @@ fn method_of(verb : String) -> @transport.Method raise @error.OssError {
 }
 
 ///|
+/// 问号之后一律隐去。传输层的 `InvalidRequest` 有几档会把整条 URL 原样写进文案
+/// （hutool 的 `split_url`：`url 缺 :// 分隔`、`url 带 fragment`、`url 缺 authority`、
+/// `pathless query` 四档都带），而预签名 URL 的 query **就是凭据本体**——
+/// `x-oss-credential` 加一条 `x-oss-expires` 窗口内可用的 `x-oss-signature`，
+/// 落进日志等于把这条授权又发出去一份。主机与路径留着：诊断要看的是"哪一发"，不是那把钥匙。
+/// `Network` 那一档本来只到源站（`建连失败（scheme://authority）：…`），一并走这条
+/// 是因为它没有代价；`InvalidResponse` 的文案由底座透上来，形状不由本库保证，同样隐去。
+fn redact_query(text : String) -> String {
+  match text.find("?") {
+    None => text
+    Some(at) => text[0:at].to_owned() + "?<redacted>"
+  }
+}
+
+///|
+/// 生产件里把传输层文案交给调用方的唯一通道：`request` 与 `read_all` 两个 catch 点都走这里，
+/// 所以隐去只需要在这一处生效。新加 catch 点时别再手写 `"network: " + detail`。
 fn transport_text(err : @transport.TransportError) -> String {
   match err {
-    @transport.TransportError::Network(detail) => "network: " + detail
+    @transport.TransportError::Network(detail) =>
+      "network: " + redact_query(detail)
     @transport.TransportError::Timeout => "timeout"
     @transport.TransportError::InvalidRequest(detail) =>
-      "invalid request: " + detail
+      "invalid request: " + redact_query(detail)
     @transport.TransportError::InvalidResponse(detail) =>
-      "invalid response: " + detail
+      "invalid response: " + redact_query(detail)
   }
 }
 

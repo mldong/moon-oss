@@ -39,14 +39,26 @@ fn trim_at(text : String, limit : Int32) -> String {
 }
 
 ///|
+/// 测试侧的第二份同款隐去（黑盒测试读不到包里的私有 `redact_query`，只能自带一份）。
+/// 这两处文案会 println 进 CI 的公开日志，而这一档测的正是预签名 URL——网络抖一下就把
+/// 一条限时授权抄进日志，所以测试件也要隐。
+fn redact_tail(text : String) -> String {
+  match text.find("?") {
+    None => text
+    Some(at) => text[0:at].to_owned() + "?<redacted>"
+  }
+}
+
+///|
 fn transport_note(err : @transport.TransportError) -> String {
   match err {
-    @transport.TransportError::Network(detail) => "network: " + detail
+    @transport.TransportError::Network(detail) =>
+      "network: " + redact_tail(detail)
     @transport.TransportError::Timeout => "timeout"
     @transport.TransportError::InvalidRequest(detail) =>
-      "invalid-request: " + detail
+      "invalid-request: " + redact_tail(detail)
     @transport.TransportError::InvalidResponse(detail) =>
-      "invalid-response: " + detail
+      "invalid-response: " + redact_tail(detail)
   }
 }
 
