@@ -63,8 +63,8 @@ async fn request(
     let text = response_body_text(body_stream, response.status)
     raise @error.Service(@error.ServiceError::{
       status: response.status,
-      code: @error.xml_error_code(text),
-      message: or_empty(@error.xml_first(text, "Message")),
+      code: xml_error_code(text),
+      message: or_empty(xml_first(text, "Message")),
       request_id: header_of(response.headers, "x-oss-request-id"),
     })
   }
@@ -142,6 +142,18 @@ fn response_text(data : Bytes, status : Int32) -> String raise @error.OssError {
         "response body is not valid UTF-8, status " + status.to_string(),
       )
   }
+}
+
+///|
+/// 读完并关掉响应体。**2xx 且不需要正文的那几条都必须走这一条**：
+/// 传输层的池只收"读尽的线"，不读也不关等于把一条 TLS 连接晾在外面——
+/// 真桶实测一轮二十几条请求时，晾着的连接会让后面的请求整等 30 秒再报 timeout。
+async fn discard_body(
+  response : @transport.Response,
+) -> Unit raise @error.OssError {
+  let body = response.body
+  let _ = read_all(body)
+  body.close()
 }
 
 ///|

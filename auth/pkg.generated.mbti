@@ -20,13 +20,19 @@ pub fn normalize_header_value(String) -> String
 
 pub fn now_millis() -> Int64
 
+pub fn presign_v4(String, String, String, String, Int64, RequestToSign) -> PresignedUrl raise @error.OssError
+
 pub fn required_headers(String) -> Array[(String, String)]
 
 pub fn scope_of(String, String) -> String
 
 pub fn sign_v4(String, String, String, String, RequestToSign) -> Signature raise @error.OssError
 
+pub fn signature_of(String, String, String, String) -> String
+
 pub fn signing_key(String, String, String) -> Bytes
+
+pub fn string_to_sign_of(String, String, String) -> String
 
 pub let unsigned_payload : String
 
@@ -41,12 +47,20 @@ pub struct Credentials {
 }
 pub fn Credentials::access_key(Self) -> String
 pub fn Credentials::new(String, String) -> Self raise @error.OssError
+pub fn Credentials::presign_at(Self, String, String, Int64, RequestToSign) -> PresignedUrl raise @error.OssError
 pub fn Credentials::sign_at(Self, String, Int64, RequestToSign) -> Signature raise @error.OssError
-pub fn Credentials::sign_now(Self, String, RequestToSign) -> Signature raise @error.OssError
 
 pub(all) struct HeaderBlock {
   block : String
   signed_names : Array[String]
+}
+
+pub(all) struct PresignedUrl {
+  query : String
+  signature : String
+  timestamp : String
+  scope : String
+  additional_headers : String
 }
 
 pub(all) struct RequestToSign {

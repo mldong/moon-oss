@@ -55,11 +55,21 @@ pub fn now_millis() -> Int64 {
 }
 
 ///|
-/// 用当前时刻签（真请求走这条）。
-pub fn Credentials::sign_now(
+/// 用注入的时刻签一次**查询串**签名（预签名 URL 走这条）。密钥只在这一层被读到——
+/// `Credentials` 的字段不公开，业务面拿不到 SK 也能出 URL。
+pub fn Credentials::presign_at(
   self : Credentials,
   region : String,
+  timestamp : String,
+  expires : Int64,
   request : RequestToSign,
-) -> Signature raise @error.OssError {
-  self.sign_at(region, @date.now_millis(), request)
+) -> PresignedUrl raise @error.OssError {
+  presign_v4(
+    self.access_key,
+    self.secret_key,
+    region,
+    timestamp,
+    expires,
+    request,
+  )
 }

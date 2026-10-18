@@ -2,13 +2,6 @@
 package "mldong/moon-oss/error"
 
 // Values
-pub fn xml_all(String, String) -> Array[String]
-
-pub fn xml_error_code(String) -> String
-
-pub fn xml_first(String, String) -> String?
-
-pub fn xml_unescape(String) -> String
 
 // Errors
 pub(all) suberror OssError {

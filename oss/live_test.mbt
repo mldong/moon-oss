@@ -71,9 +71,9 @@ async fn probe_list_objects(client : @oss.Client, bucket : String) -> String {
     err => return "error:" + err.text()
   }
   "ok:" +
-  listing.keys.length().to_string() +
+  listing.objects.length().to_string() +
   " keys, truncated=" +
-  listing.truncated.to_string()
+  listing.is_truncated.to_string()
 }
 
 ///|

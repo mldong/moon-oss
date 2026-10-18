@@ -300,6 +300,37 @@ pub fn signing_key(
 }
 
 ///|
+/// StringToSign 四行。Header 签名与查询串签名共用同一条：两代只差"结果写进哪个位置"，
+/// 规范化算法差一个字都要全线 403，所以不许两处各写一遍。
+pub fn string_to_sign_of(
+  timestamp : String,
+  scope : String,
+  canonical : String,
+) -> String {
+  let algorithm = "OSS4-HMAC-SHA256"
+  algorithm +
+  "\n" +
+  timestamp +
+  "\n" +
+  scope +
+  "\n" +
+  @digest.sha256_hex(canonical)
+}
+
+///|
+pub fn signature_of(
+  secret_key : String,
+  date : String,
+  region : String,
+  string_to_sign : String,
+) -> String {
+  @digest.hmac_sha256_hex_of_bytes(
+    signing_key(secret_key, date, region),
+    @utf8.encode(string_to_sign.view()),
+  )
+}
+
+///|
 /// `timestamp` 必须是 ISO8601 基本格式（`YYYYMMDDTHHMMSSZ`，UTC），日期段直接前缀取。
 pub fn sign_v4(
   access_key : String,
@@ -323,17 +354,8 @@ pub fn sign_v4(
   let extras = additional_headers(headers.signed_names)
   let algorithm = "OSS4-HMAC-SHA256"
   let credential = access_key + "/" + scope
-  let string_to_sign = algorithm +
-    "\n" +
-    timestamp +
-    "\n" +
-    scope +
-    "\n" +
-    @digest.sha256_hex(canonical)
-  let signature = @digest.hmac_sha256_hex_of_bytes(
-    signing_key(secret_key, date, region),
-    @utf8.encode(string_to_sign.view()),
-  )
+  let string_to_sign = string_to_sign_of(timestamp, scope, canonical)
+  let signature = signature_of(secret_key, date, region, string_to_sign)
   let head = algorithm + " Credential=" + credential
   let authorization = if extras.is_empty() {
     head + ", Signature=" + signature
