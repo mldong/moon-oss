@@ -1,0 +1,91 @@
+# mldong/moon-oss
+
+阿里云对象存储（OSS）**原生协议**客户端的 MoonBit 版，签名走官方推荐的 V4
+（`OSS4-HMAC-SHA256`）。它不认识存储核心层的 `FileInfo`，也不依赖任何上层——纯对象操作、
+备份、静态站发布都可以直接用。
+
+这不是"把 S3 兼容层换个端点"：OSS 的 S3 兼容层写入侧会被授权层拒，而原生协议这一族
+（`x-oss-*` 头、V4 查询串签名、`x-oss-copy-source`）本来就与 SigV4 不同名、不同形状。
+
+## 最小用法
+
+```moonbit
+test "V4 的两条出口都由注入的时刻决定：Authorization 串与预签名查询串" {
+  let credentials = @ossauth.Credentials::new("ak-example", "sk-example")
+  let request = @ossauth.RequestToSign::{
+    verb: "GET",
+    canonical_uri: "/demo-bucket/note.txt",
+    query: [("acl", "")],
+    headers: [("x-oss-date", "20261018T064124Z")],
+  }
+  let signed = credentials.sign_at("cn-zhangjiakou", 1792305684000L, request)
+  assert_eq(signed.scope, "20261018/cn-zhangjiakou/oss/aliyun_v4_request")
+  assert_true(signed.authorization.has_prefix(
+    "OSS4-HMAC-SHA256 Credential=ak-example/20261018/cn-zhangjiakou/oss/aliyun_v4_request",
+  ))
+  let presigned = credentials.presign_at(
+    "cn-zhangjiakou",
+    "20261018T064124Z",
+    600L,
+    request,
+  )
+  assert_true(presigned.query.contains("x-oss-signature="))
+  let config = @ossconfig.Config::new(
+    "https://oss-cn-zhangjiakou.aliyuncs.com",
+    "cn-zhangjiakou",
+    credentials,
+  )
+  assert_eq(config.host_of("demo-bucket"), "demo-bucket.oss-cn-zhangjiakou.aliyuncs.com")
+  assert_eq(config.canonical_uri_of("demo-bucket", key="note.txt"), "/demo-bucket/note.txt")
+  let _client = @sdk.Client::new(config, @transport.AsyncHttpTransport::new())
+}
+```
+
+时钟是入参而不是内部取 `now()`：这样"请求→签名"整条链能被钉成一份可复现的样本，
+出问题时分得清是签名算错还是时钟漂移。真请求走 `Client` 上那些方法，它们自己读时钟。
+
+凭据类型刻意不派生 `Debug` 与 `ToJson`：一个"打印出来看看"的调试语句就把密钥写进日志了。
+
+## 寻址风格没有开关
+
+OSS 只收虚主机风格（`https://<桶>.oss-<区域>.aliyuncs.com/<键>`），path 风格一律回
+403 `SecondLevelDomainForbidden`（真桶现读）。没有可选项的东西不做成配置——
+接入方以为关掉它就能绕过，反而多一类错。
+
+签名里那条"规范化资源路径"因此与 URL 形状无关，它按**请求目标**算：服务级 `/`、
+桶级 `/<桶>/`、对象级 `/<桶>/<键>`。这一条与 AWS SigV4 相反，照 SigV4 抄会全线 403。
+
+## 覆盖的族
+
+对象读写与删除、条件读（Range）、列举（ListObjects V2，含前缀／分隔符／续页符）、
+手动分片五步、预签名 GET 与 PUT、对象 ACL 读写、服务级列桶。
+
+`?acl`／`?uploads` 这类**无值参数**在规范化查询串里只写键名、不带 `=`——又是与 SigV4
+相反的一处，两处形状都各有真桶读数钉着。
+
+## 开发进度
+
+排法按消费方需要什么，不按协议里有什么。状态词只有三个：**已实现**（有公开件且真桶跑过）、
+**待开发**（公开面里零命中）、**不适用**（协议里没这一族）。
+
+| 要的那一格 | 本 SDK 的件 | 状态 |
+|---|---|---|
+| 上传 / 下载 / 删除 / 存在 | `put_object` `get_object` `delete_object` `stat_object` | 已实现 |
+| 用户元数据读写 | `metadata~`（`x-oss-meta-*`，写了能读回） | 已实现 |
+| 单层列举 | `list_objects`（前缀／分隔符／续页） | 已实现 |
+| 手动分片五步 | `create_multipart_upload` `upload_part` `list_parts` `complete_multipart_upload` `abort_multipart_upload` | 已实现 |
+| 预签名 GET 与 PUT | `presigned_get_url` `presigned_put_url` | 已实现 |
+| 同平台复制 | `copy_object`（移动＝复制＋`delete_object`） | 已实现 |
+| 对象 ACL 读写 | `put_object_acl` `get_object_acl` | 已实现 |
+| 服务级列桶 | `list_buckets` | 已实现 |
+| 大文件"一条式"上传（自动切分片） | 无对应件，分片由调用侧按五步走 | 待开发 |
+| 上传进度回调 | 无对应件 | 待开发 |
+| STS 临时凭据（`x-oss-security-token`） | 无对应件，`Credentials` 只有永久密钥两把 | 待开发 |
+| 桶族（建／删／配置） | 无对应件 | 不适用 |
+
+桶族不做是刻意的：建桶与改桶配置是账号级动作，误用一次的代价比这一族带来的便利大得多。
+
+## 与 S3 客户端的分工
+
+同一个桶既能被 `moon-s3`（走 S3 兼容层）打到也能被本仓打到，但结论不互借：兼容层的写入侧
+在授权层就被拒过，而本仓全程走原生协议。判"某个形状 OSS 认不认"，这里只认真桶读数。

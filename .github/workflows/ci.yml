@@ -1,0 +1,213 @@
+name: ci
+
+# 三仓同形的门禁。这条仓的真端点档只能打**真桶**：OSS 没有可离线起的本地端点，
+# 所以 CI 用四个 secret（OSS_AK / OSS_SK / OSS_BUCKET / OSS_REGION）跑那些 live 腿。
+# `OSS_DOMAIN` 是存储仓那条腿拼 `FileInfo.url` 用的，本仓代码不读它，故不进这里的 preflight。
+#
+# 残留怎么办：live 腿的键都写在 `moonfs-<运行号>-*` 前缀下，桶侧已配生命周期规则
+# （前缀 `moonfs-`，1 天过期）⇒ 跑挂了、被取消了，也由服务端过期兜住，CI 里不写删除逻辑。
+# 腿内部该自删的照旧自删（每条用例末尾删自己建的对象），复列计数交给那条生命周期规则兜底。
+#
+# secret 没到位时**必须红**，不许退化成 SKIP 过关：见 Preflight 那一步。
+# 用例条数断言不许删：wasm-gc 那档会静默丢掉异步用例而退出码仍为 0，条数是"真跑过"的唯一证据。
+# 条数与改动同笔更新；对不上先现读再改，严禁拿删断言变绿。
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*.*.*']
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "检查全绿后是否发布到 mooncakes（tag 触发默认发布；手动触发需显式勾选）"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Check / Build / Test (wasm + native, live OSS bucket)
+    runs-on: ubuntu-latest
+    env:
+      EXPECTED_TESTS: "16"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MoonBit toolchain (latest)
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
+      - name: Toolchain version
+        run: |
+          moon version --all
+          moon update
+
+      - name: Preflight live-bucket credentials (values never printed)
+        env:
+          OSS_AK: ${{ secrets.OSS_AK }}
+          OSS_SK: ${{ secrets.OSS_SK }}
+          OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
+          OSS_REGION: ${{ secrets.OSS_REGION }}
+        run: |
+          missing=0
+          for pair in "OSS_AK:${#OSS_AK}" "OSS_SK:${#OSS_SK}" \
+                      "OSS_BUCKET:${#OSS_BUCKET}" "OSS_REGION:${#OSS_REGION}"; do
+            name=${pair%%:*}; len=${pair##*:}
+            if [ "$len" = "0" ]; then
+              echo "::error::$name 没到位——缺它这条腿只会 SKIP，那不是绿"
+              missing=1
+            else
+              echo "  $name 到位（长度 $len，值不外泄）"
+            fi
+          done
+          [ "$missing" = "0" ]
+
+      - name: Check
+        run: moon check --target wasm --no-render
+
+      - name: Build
+        run: |
+          moon build --target wasm --no-render
+          moon build --target native --no-render
+
+      - name: Test
+        env:
+          OSS_AK: ${{ secrets.OSS_AK }}
+          OSS_SK: ${{ secrets.OSS_SK }}
+          OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
+          OSS_REGION: ${{ secrets.OSS_REGION }}
+        run: |
+          # 为什么整档允许重试（最多 3 次）：本机带凭据实测——打公网 OSS 的 live 腿会间歇红在
+          # `oss network: timeout`，位置不固定，而同批用例复跑是绿的 ⇒ 公网间歇，不是代码。
+          # 但"用了几次才过"必须写进 summary 并受硬闸约束：靠 re-run 混过去的门禁等于没有门禁。
+          run_live() {
+            target=$1; out=$2; a=1
+            until moon test --target "$target" -j 1 --no-render > "$out" 2>&1; do
+              if [ "$a" -ge 3 ]; then
+                echo "::error::$target 档连红 3 次，这次不是抖动"
+                grep -E "FAILED|failed:" "$out" | head -8 || true
+                exit 1
+              fi
+              a=$((a + 1)); sleep 20
+            done
+            echo "$target 档通过所用尝试次数：$a / 3" >> "$GITHUB_STEP_SUMMARY"
+            echo "$target 档 timeout 行数=$(grep -c 'timeout' "$out" || true)" \
+              >> "$GITHUB_STEP_SUMMARY"
+            grep -q "Total tests: $EXPECTED_TESTS, passed: $EXPECTED_TESTS, failed: 0" "$out"
+          }
+          run_live wasm wasm-test.txt
+          run_live native native-test.txt
+          # 这条仓没有"允许 SKIP"的 live 腿：出现 SKIP 就是 secret 或网络掉了。
+          if grep -q "SKIP IS NOT A PASS" wasm-test.txt; then
+            echo "::error::有 live 腿在 CI 里 SKIP 了，这不算绿" >&2
+            grep -n "SKIP IS NOT A PASS" wasm-test.txt | head -3
+            exit 1
+          fi
+          # 三条承重读数打出来，让人一眼看出真端点真被打到（不含任何凭据）：
+          # 列桶条数、ACL 那一族的服务端结论、分片完成后的 ETag 形状。
+          grep -E "list_buckets ok:|put_object_acl\(|complete etag=" wasm-test.txt | head -6
+
+      - name: README snippet check
+        run: |
+          export MOON_HOME="$HOME/.moon"
+          bash scripts/readme-check.sh
+
+      - name: Generated interface is up to date
+        run: |
+          moon info --target wasm
+          git diff --exit-code -- '*pkg.generated.mbti'
+
+      - name: Formatting
+        run: moon fmt --check
+
+      - name: Assert zero warnings
+        run: |
+          moon check --target wasm --no-render 2>&1 | tee check.txt
+          ! grep -q "Warning" check.txt
+
+  publish:
+    name: Publish mldong/moon-oss to mooncakes
+    needs: verify
+    # 判据是单数 'tag'：写成 'tags' 会让 tag 推送的整个 publish job 被 skip，而 workflow 结论
+    # 照旧 success（moon-token 的 v0.1.7 就是这么静默漏发过一次）。下面第一步把三个值打进 log。
+    if: github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.publish)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: What triggered this publish
+        env:
+          PUBLISH_INPUT: ${{ inputs.publish }}
+        run: |
+          echo "event_name=$GITHUB_EVENT_NAME ref=$GITHUB_REF ref_type=$GITHUB_REF_TYPE"
+          echo "publish input=$PUBLISH_INPUT version=$(sed -nE 's/^version = "([^"]+)".*/\1/p' moon.mod | head -1)"
+
+      - name: Install MoonBit toolchain (latest)
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+          "$HOME/.moon/bin/moon" version
+
+      - name: Preflight credentials present (values never printed)
+        env:
+          MOON_TOKEN: ${{ secrets.MOON_TOKEN }}
+          MOON_USERNAME: ${{ secrets.MOON_USERNAME }}
+        run: |
+          [ -n "$MOON_TOKEN" ] || {
+            echo "::error::secrets.MOON_TOKEN 没到位（org 级 secret 需把本仓放进可见范围，或在本仓建同名）"
+            exit 1
+          }
+          [ -n "$MOON_USERNAME" ] || { echo "::error::secrets.MOON_USERNAME 没到位"; exit 1; }
+          echo "凭证到位：token 长度 ${#MOON_TOKEN}（值不外泄），用户名 $MOON_USERNAME"
+
+      - name: Write mooncakes credentials
+        env:
+          MOON_TOKEN: ${{ secrets.MOON_TOKEN }}
+          MOON_USERNAME: ${{ secrets.MOON_USERNAME }}
+        run: |
+          mkdir -p "$HOME/.moon"
+          printf '{"token":"%s","username":"%s"}\n' "$MOON_TOKEN" "$MOON_USERNAME" \
+            > "$HOME/.moon/credentials.json"
+
+      - name: Update index and install dependencies
+        run: |
+          moon update
+          moon install
+
+      - name: Publish (re-entrant, skip if the index already has this version)
+        run: bash .github/scripts/publish-if-absent.sh . mldong/moon-oss
+
+      # 上传 200／版本可见／用户装得到是三件事，这一步只认第三件：按新用户的路径建空工程，用
+      # `moon add`（不给版本号，由注册表解析）引刚发上去的那一代，把解析到的 pin 打进 log，
+      # 再真编译真跑。
+      # 为什么不用 `import { "mldong/moon-oss" }`：这个版本的 moon.mod 拒绝无版本号的 registry 依赖
+      # （实测 "moon.mod only supports versioned registry dependencies in import"）。
+      # 探针里的表达式抄自已过门禁的 README 最小用法块，不是现编的 API。
+      # pin 那一行用 grep -oE 现读，**别把日志里的掩码串（***）抄进模式**——那是上一轮踩过的死格。
+      - name: Consumer leg — install the just-published version and build against it
+        run: |
+          export MOON_HOME="$HOME/.moon"
+          moon update
+          probe="$RUNNER_TEMP/consumer-oss"
+          rm -rf "$probe"; mkdir -p "$probe/lib"
+          printf 'name = "mldong/consumer_probe_oss"\nversion = "0.0.0"\npreferred_target = "wasm"\n' > "$probe/moon.mod"
+          printf 'import {\n  "mldong/moon-oss/oss" @sdk,\n  "mldong/moon-oss/auth" @ossauth,\n  "mldong/moon-oss/config" @ossconfig,\n}\n' > "$probe/lib/moon.pkg"
+          printf 'test "the just-published module installs and works" {\n  let credentials = @ossauth.Credentials::new("ak-example", "sk-example")\n  let signed = credentials.sign_at("cn-zhangjiakou", 1792305684000L, @ossauth.RequestToSign::{\n    verb: "GET",\n    canonical_uri: "/demo-bucket/note.txt",\n    query: [("acl", "")],\n    headers: [("x-oss-date", "20261018T064124Z")],\n  })\n  assert_eq(signed.scope, "20261018/cn-zhangjiakou/oss/aliyun_v4_request")\n  let config = @ossconfig.Config::new("oss-cn-zhangjiakou.aliyuncs.com", "cn-zhangjiakou", credentials)\n  assert_eq(config.canonical_uri_of("demo-bucket", key="note.txt"), "/demo-bucket/note.txt")\n  let _ = @sdk.BucketListing::{ names: ["demo-bucket"], body: "" }\n}\n' > "$probe/lib/probe_test.mbt"
+          cd "$probe"
+          # 发布后索引与制品的传播有尾（上传 200 ≠ 装得到），故重试 3 次；用了几次才装到进 summary。
+          a=1
+          until moon add mldong/moon-oss; do
+            if [ "$a" -ge 3 ]; then
+              echo "::error::连试 3 次都从注册表装不到刚发上去的 mldong/moon-oss —— 这次是真没装得到"
+              exit 1
+            fi
+            a=$((a + 1)); moon update >/dev/null 2>&1 || true; sleep 20
+          done
+          echo "consumer leg 安装所用尝试次数：$a / 3" >> "$GITHUB_STEP_SUMMARY"
+          echo "注册表解析到的 pin：$(grep -oE 'mldong/moon-oss@[0-9.]*' moon.mod | head -1)"
+          moon test --target wasm --no-render
