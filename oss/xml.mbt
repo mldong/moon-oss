@@ -85,30 +85,19 @@ pub fn xml_sections(text : String, tag : String) -> Array[String] {
 }
 
 ///|
-/// 五个预定义实体（含十进制写法）。数值写法不能省：真端点在 ETag 里回 `&#34;…&#34;`
-/// 是实测过的形状，只认命名写法会把服务端给的引号当成标签的一部分。
+/// 实体还原归 hutool（`@text.unescape_xml`），本仓不再自带那张表。
+///
+/// 两者对 S3/OSS 实际会回的形状逐字相同（ETag 的 `&#34;…&#34;`、键里的 `&`／`<`、
+/// `&amp;lt;` 这类"解一趟就到位"的档位都同读数）；hutool 是**超集**——它还认十六进制引用与任意
+/// 十进制引用，那是参照实现本来认的，多认不出错。
+///
+/// 唯一不追求逐字等价的一档：那一件是 `raise`，解不动时**整串原样退回**，
+/// 不是逐 token 退回（本库负向用例钉着）。落单代理 `&#xD800;` 这类形状 MoonBit 的 `String`
+/// 表示不了，整串拒绝比产出一个装不下的值诚实。
 pub fn xml_unescape(text : String) -> String {
-  let numeric = replace_all_pairs(text, [
-    ("&#34;", "\""),
-    ("&#39;", "'"),
-    ("&#60;", "<"),
-    ("&#62;", ">"),
-  ])
-  let lt = numeric.replace_all(old="&lt;", new="<")
-  let gt = lt.replace_all(old="&gt;", new=">")
-  let quot = gt.replace_all(old="&quot;", new="\"")
-  let apos = quot.replace_all(old="&apos;", new="'")
-  let amp = apos.replace_all(old="&amp;", new="&")
-  amp.replace_all(old="&#38;", new="&")
-}
-
-///|
-fn replace_all_pairs(text : String, pairs : Array[(String, String)]) -> String {
-  let mut out = text
-  for pair in pairs {
-    out = out.replace_all(old=pair.0, new=pair.1)
+  @text.unescape_xml(text) catch {
+    _ => text
   }
-  out
 }
 
 ///|
@@ -121,11 +110,8 @@ pub fn xml_error_code(body : String) -> String {
 }
 
 ///|
-/// 把要写进 XML 请求体的文本转义（对象键可以含 `&` 与 `<`）。
+/// 写进 XML 请求体的文本要转义（对象键可以含 `&` 与 `<`）。同样归 hutool：
+/// 它的 `escape_xml` 是单趟查表，不会像"逐条 replace_all"那样把刚产出的 `&amp;` 再吃进去。
 pub fn xml_escape(text : String) -> String {
-  let amp = text.replace_all(old="&", new="&amp;")
-  let lt = amp.replace_all(old="<", new="&lt;")
-  let gt = lt.replace_all(old=">", new="&gt;")
-  let quot = gt.replace_all(old="\"", new="&quot;")
-  quot.replace_all(old="'", new="&apos;")
+  @text.escape_xml(text)
 }
