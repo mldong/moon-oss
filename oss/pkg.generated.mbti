@@ -1,0 +1,36 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "mldong/moon-oss/oss"
+
+import {
+  "mldong/moon-hutool/http",
+  "mldong/moon-oss/config",
+  "mldong/moon-oss/error",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct BucketListing {
+  names : Array[String]
+  body : String
+}
+
+pub struct Client {
+  config : @config.Config
+  transport : &@http.Transport
+}
+pub async fn Client::list_buckets(Self) -> BucketListing raise @error.OssError
+pub async fn Client::list_objects(Self, String, prefix? : String, max_keys? : Int) -> ObjectListing raise @error.OssError
+pub fn Client::new(@config.Config, &@http.Transport) -> Self
+
+pub(all) struct ObjectListing {
+  keys : Array[String]
+  truncated : Bool
+  body : String
+}
+
+// Type aliases
+
+// Traits

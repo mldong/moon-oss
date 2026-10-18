@@ -1,0 +1,71 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "mldong/moon-oss/auth"
+
+import {
+  "mldong/moon-oss/error",
+}
+
+// Values
+pub fn additional_headers(Array[String]) -> String
+
+pub fn canonical_headers(Array[(String, String)]) -> HeaderBlock
+
+pub fn canonical_query_string(Array[(String, String)]) -> String
+
+pub fn canonical_request(RequestToSign) -> String
+
+pub fn iso8601_basic(Int64) -> String raise @error.OssError
+
+pub fn normalize_header_value(String) -> String
+
+pub fn now_millis() -> Int64
+
+pub fn required_headers(String) -> Array[(String, String)]
+
+pub fn scope_of(String, String) -> String
+
+pub fn sign_v4(String, String, String, String, RequestToSign) -> Signature raise @error.OssError
+
+pub fn signing_key(String, String, String) -> Bytes
+
+pub let unsigned_payload : String
+
+pub fn uri_encode(String, keep_slash? : Bool) -> String
+
+// Errors
+
+// Types and methods
+pub struct Credentials {
+  access_key : String
+  secret_key : String
+}
+pub fn Credentials::access_key(Self) -> String
+pub fn Credentials::new(String, String) -> Self raise @error.OssError
+pub fn Credentials::sign_at(Self, String, Int64, RequestToSign) -> Signature raise @error.OssError
+pub fn Credentials::sign_now(Self, String, RequestToSign) -> Signature raise @error.OssError
+
+pub(all) struct HeaderBlock {
+  block : String
+  signed_names : Array[String]
+}
+
+pub(all) struct RequestToSign {
+  verb : String
+  canonical_uri : String
+  query : Array[(String, String)]
+  headers : Array[(String, String)]
+}
+
+pub(all) struct Signature {
+  authorization : String
+  additional_headers : String
+  scope : String
+  timestamp : String
+  canonical_request : String
+  string_to_sign : String
+  signature : String
+}
+
+// Type aliases
+
+// Traits

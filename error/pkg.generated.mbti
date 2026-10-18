@@ -1,0 +1,32 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "mldong/moon-oss/error"
+
+// Values
+pub fn xml_all(String, String) -> Array[String]
+
+pub fn xml_error_code(String) -> String
+
+pub fn xml_first(String, String) -> String?
+
+pub fn xml_unescape(String) -> String
+
+// Errors
+pub(all) suberror OssError {
+  BadParam(String)
+  Network(String)
+  BadResponse(String)
+  Service(ServiceError)
+}
+pub fn OssError::text(Self) -> String
+
+// Types and methods
+pub(all) struct ServiceError {
+  status : Int
+  code : String
+  message : String
+  request_id : String?
+}
+
+// Type aliases
+
+// Traits

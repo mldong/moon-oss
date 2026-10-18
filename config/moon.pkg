@@ -1,0 +1,6 @@
+import {
+  "mldong/moon-oss/auth",
+  "mldong/moon-oss/error",
+}
+
+supported_targets = "wasm+native+js"
