@@ -356,6 +356,27 @@ async test "真桶·存储类/自动 MD5/版本与 CORS 读：自命名前缀，
         let policy = client.get_bucket_policy(bucket) catch {
           err => fail("get bucket policy: " + err.text())
         }
+        let replication = client.get_bucket_replication(bucket) catch {
+          err => fail("get bucket replication: " + err.text())
+        }
+        let inventories = client.list_bucket_inventories(bucket) catch {
+          err => fail("list bucket inventories: " + err.text())
+        }
+        let missing_inventory = client.get_bucket_inventory(
+          bucket, "moonfs-probe-missing",
+        ) catch {
+          err => fail("get missing inventory: " + err.text())
+        }
+        println(
+          "oss inventories=" +
+          inventories.length().to_string() +
+          " missing=" +
+          (missing_inventory is None).to_string(),
+        )
+        println(
+          "oss bucket replication configured=" +
+          (replication is Some(_)).to_string(),
+        )
         println(
           "oss bucket policy configured=" + (policy is Some(_)).to_string(),
         )

@@ -2,8 +2,8 @@
 
 > 协议基线：[OSS API 参考](https://help.aliyun.com/zh/oss/developer-reference/)
 > 参考实现：`aliyun/alibabacloud-oss-go-sdk-v2@v1.6.1`（2026-10-16）；交叉核对 Java `3.18.5`（2026-01-30）
-> 本仓版本：`mldong/moon-oss@0.3.0`
-> 当前公开面：58 个 `Client::` 方法（0.3.0）
+> 本仓版本：`mldong/moon-oss@0.4.0`
+> 当前公开面：65 个 `Client::` 方法（0.4.0）
 > 状态：现有行先记 `已实现`，真桶证据待按基线逐行复核
 
 ## 1. 当前公开面
@@ -50,7 +50,8 @@
 | OSS-BKT-008 | 生命周期（Get/Put/DeleteBucketLifecycle） | `get_bucket_lifecycle` `put_bucket_lifecycle` `delete_bucket_lifecycle` | P1 | 部分真桶 | 读 2026-10-22 真桶绿（1 条规则）；写只落离线件 |
 | OSS-BKT-015 | 防盗链（Referer） | `get_bucket_referer` `put_bucket_referer` | P1 | 部分真桶 | 读 2026-10-22 真桶绿（白名单 0 条）；写入未跑 |
 | OSS-BKT-013 | 网站托管（Get/Put/DeleteBucketWebsite） | `get_bucket_website` `put_bucket_website` `delete_bucket_website` | P1 | 已实现 | GET 2026-10-22 真桶绿；PUT/DELETE 未跑 |
-| OSS-BKT-009 | 复制/清单（Replication/Inventory） | — | P1 | 未开始 | 复制、清单 |
+| OSS-BKT-009 | 复制（Get/Put/DeleteBucketReplication） | `get_bucket_replication` `put_bucket_replication` `delete_bucket_replication` | P1 | 部分真桶 | 读 2026-10-22 真桶绿（未配置回 None）；写只落离线件 |
+| OSS-BKT-017 | 清单（Inventory 四件） | `put_bucket_inventory` `get_bucket_inventory` `delete_bucket_inventory` `list_bucket_inventories` | P1 | 部分真桶 | 真桶 list 空表 404 落空数组、缺失 id 回 None；写只落离线件 |
 | OSS-BKT-014 | 服务端加密（Get/Put/DeleteBucketEncryption） | `get_bucket_encryption` `put_bucket_encryption` `delete_bucket_encryption` | P1 | 已实现 | GET 2026-10-22 真桶绿；PUT/DELETE 未跑 |
 | OSS-BKT-010 | 桶策略（Get/Put/DeleteBucketPolicy） | `get_bucket_policy` `put_bucket_policy` `delete_bucket_policy` | P1 | 部分真桶 | 读 2026-10-22 真桶绿（未配置回 None）；写只落离线件 |
 | OSS-BKT-016 | 对象锁（Object Lock） | — | P1 | 不纳入 | 官方 Go V2 基线无 Object Lock API（走 WORM 另一族） |
