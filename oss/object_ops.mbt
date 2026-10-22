@@ -13,13 +13,32 @@ pub async fn Client::put_object(
   content_type~ : String = "",
   metadata~ : Array[(String, String)] = [],
   acl~ : String = "",
+  storage_class~ : String = "",
+  content_md5~ : String = "",
+  compute_md5~ : Bool = false,
+  if_match~ : String = "",
+  if_none_match~ : String = "",
+  forbid_overwrite~ : Bool = false,
 ) -> PutObjectResult raise @error.OssError {
+  if compute_md5 && !content_md5.is_empty() {
+    raise @error.BadParam("content_md5 and compute_md5 are mutually exclusive")
+  }
+  let md5 = if compute_md5 { content_md5_of(data) } else { content_md5 }
   let response = request(
     self,
     "PUT",
     bucket,
     key~,
-    extra_headers=object_headers(content_type~, metadata~, acl~, copy_source=""),
+    extra_headers=object_headers(
+        content_type~,
+        metadata~,
+        acl~,
+        copy_source="",
+        storage_class~,
+        content_md5=md5,
+        forbid_overwrite~,
+      ) +
+      conditional_headers(if_match~, if_none_match~),
     body=@transport.RequestBody::Bytes(data),
   )
   discard_body(response)
@@ -34,11 +53,19 @@ pub async fn Client::get_object(
   bucket : String,
   key : String,
   range~ : String = "",
+  if_match~ : String = "",
+  if_none_match~ : String = "",
+  if_modified_since~ : String = "",
+  if_unmodified_since~ : String = "",
 ) -> ObjectData raise @error.OssError {
-  let extra : Array[(String, String)] = if range.is_empty() {
-    []
-  } else {
-    [("range", range)]
+  let extra = conditional_headers(
+    if_match~,
+    if_none_match~,
+    if_modified_since~,
+    if_unmodified_since~,
+  )
+  if !range.is_empty() {
+    extra.push(("range", range))
   }
   let response = request(self, "GET", bucket, key~, extra_headers=extra)
   let body = read_all(response.body)
@@ -62,8 +89,23 @@ pub async fn Client::stat_object(
   self : Client,
   bucket : String,
   key : String,
+  if_match~ : String = "",
+  if_none_match~ : String = "",
+  if_modified_since~ : String = "",
+  if_unmodified_since~ : String = "",
 ) -> ObjectStat raise @error.OssError {
-  let response = request(self, "HEAD", bucket, key~)
+  let response = request(
+    self,
+    "HEAD",
+    bucket,
+    key~,
+    extra_headers=conditional_headers(
+      if_match~,
+      if_none_match~,
+      if_modified_since~,
+      if_unmodified_since~,
+    ),
+  )
   discard_body(response)
   ObjectStat::{
     key,
@@ -71,6 +113,7 @@ pub async fn Client::stat_object(
     size: parse_int64(or_empty(header_of(response.headers, "content-length"))),
     last_modified: header_of(response.headers, "last-modified"),
     content_type: header_of(response.headers, "content-type"),
+    storage_class: header_of(response.headers, "x-oss-storage-class"),
     metadata: meta_pairs(response.headers),
   }
 }
@@ -80,8 +123,15 @@ pub async fn Client::delete_object(
   self : Client,
   bucket : String,
   key : String,
+  if_match~ : String = "",
 ) -> Unit raise @error.OssError {
-  let response = request(self, "DELETE", bucket, key~)
+  let response = request(
+    self,
+    "DELETE",
+    bucket,
+    key~,
+    extra_headers=conditional_headers(if_match~, if_none_match=""),
+  )
   discard_body(response)
 }
 
@@ -96,6 +146,12 @@ pub async fn Client::copy_object(
   bucket : String,
   key : String,
   metadata~ : Array[(String, String)] = [],
+  storage_class~ : String = "",
+  forbid_overwrite~ : Bool = false,
+  copy_source_if_match~ : String = "",
+  copy_source_if_none_match~ : String = "",
+  copy_source_if_modified_since~ : String = "",
+  copy_source_if_unmodified_since~ : String = "",
 ) -> CopyResult raise @error.OssError {
   let source = "/" +
     source_bucket +
@@ -106,7 +162,18 @@ pub async fn Client::copy_object(
     "PUT",
     bucket,
     key~,
-    extra_headers=object_headers(metadata~, copy_source=source),
+    extra_headers=object_headers(
+        metadata~,
+        copy_source=source,
+        storage_class~,
+        forbid_overwrite~,
+      ) +
+      copy_source_conditional_headers(
+        if_match=copy_source_if_match,
+        if_none_match=copy_source_if_none_match,
+        if_modified_since=copy_source_if_modified_since,
+        if_unmodified_since=copy_source_if_unmodified_since,
+      ),
   )
   let body = response_body_text(response.body, response.status)
   CopyResult::{ etag: or_empty(xml_first(body, "ETag")), body, }
@@ -121,6 +188,9 @@ fn object_headers(
   metadata~ : Array[(String, String)] = [],
   acl~ : String = "",
   copy_source~ : String = "",
+  storage_class~ : String = "",
+  content_md5~ : String = "",
+  forbid_overwrite~ : Bool = false,
 ) -> Array[(String, String)] {
   let headers : Array[(String, String)] = []
   if !content_type.is_empty() {
@@ -132,8 +202,88 @@ fn object_headers(
   if !copy_source.is_empty() {
     headers.push(("x-oss-copy-source", copy_source))
   }
+  if !storage_class.is_empty() {
+    headers.push(("x-oss-storage-class", storage_class))
+  }
+  if !content_md5.is_empty() {
+    headers.push(("content-md5", content_md5))
+  }
+  if forbid_overwrite {
+    headers.push(("x-oss-forbid-overwrite", "true"))
+  }
   for pair in metadata {
     headers.push(("x-oss-meta-" + pair.0, pair.1))
+  }
+  headers
+}
+
+///|
+fn content_md5_of(data : Bytes) -> String {
+  @base64.encode(@digest.md5_of_bytes(data).exact_view())
+}
+
+///|
+/// 条件请求头。两个条件同时给会变成"既要求匹配又要求不匹配"，本地直接拒，
+/// 不把矛盾交给服务端换一条含糊的 412。
+fn conditional_headers(
+  if_match~ : String = "",
+  if_none_match~ : String = "",
+  if_modified_since~ : String = "",
+  if_unmodified_since~ : String = "",
+) -> Array[(String, String)] raise @error.OssError {
+  if !if_match.is_empty() && !if_none_match.is_empty() {
+    raise @error.BadParam("if_match and if_none_match are mutually exclusive")
+  }
+  if !if_modified_since.is_empty() && !if_unmodified_since.is_empty() {
+    raise @error.BadParam(
+      "if_modified_since and if_unmodified_since are mutually exclusive",
+    )
+  }
+  let headers : Array[(String, String)] = []
+  if !if_match.is_empty() {
+    headers.push(("if-match", if_match))
+  }
+  if !if_none_match.is_empty() {
+    headers.push(("if-none-match", if_none_match))
+  }
+  if !if_modified_since.is_empty() {
+    headers.push(("if-modified-since", if_modified_since))
+  }
+  if !if_unmodified_since.is_empty() {
+    headers.push(("if-unmodified-since", if_unmodified_since))
+  }
+  headers
+}
+
+///|
+fn copy_source_conditional_headers(
+  if_match~ : String,
+  if_none_match~ : String,
+  if_modified_since~ : String,
+  if_unmodified_since~ : String,
+) -> Array[(String, String)] raise @error.OssError {
+  if !if_match.is_empty() && !if_none_match.is_empty() {
+    raise @error.BadParam(
+      "copy source if_match and if_none_match are mutually exclusive",
+    )
+  }
+  if !if_modified_since.is_empty() && !if_unmodified_since.is_empty() {
+    raise @error.BadParam(
+      "copy source if_modified_since and if_unmodified_since are mutually exclusive",
+    )
+  }
+  let headers : Array[(String, String)] = []
+  if !if_match.is_empty() {
+    headers.push(("x-oss-copy-source-if-match", if_match))
+  }
+  if !if_none_match.is_empty() {
+    headers.push(("x-oss-copy-source-if-none-match", if_none_match))
+  }
+  if !if_modified_since.is_empty() {
+    headers.push(("x-oss-copy-source-if-modified-since", if_modified_since))
+  }
+  if !if_unmodified_since.is_empty() {
+    headers.push(("x-oss-copy-source-if-unmodified-since", if_unmodified_since))
   }
   headers
 }

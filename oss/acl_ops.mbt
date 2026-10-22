@@ -38,6 +38,36 @@ pub async fn Client::get_object_acl(
 ) -> ObjectAcl raise @error.OssError {
   let response = request(self, "GET", bucket, key~, query=[("acl", "")])
   let body = response_body_text(response.body, response.status)
+  parse_acl(body)
+}
+
+///|
+pub async fn Client::put_bucket_acl(
+  self : Client,
+  bucket : String,
+  acl : String,
+) -> Unit raise @error.OssError {
+  if acl.is_empty() {
+    raise @error.BadParam("acl value is required")
+  }
+  let response = request(self, "PUT", bucket, query=[("acl", "")], extra_headers=[
+    ("x-oss-acl", acl),
+  ])
+  discard_body(response)
+}
+
+///|
+pub async fn Client::get_bucket_acl(
+  self : Client,
+  bucket : String,
+) -> ObjectAcl raise @error.OssError {
+  let response = request(self, "GET", bucket, query=[("acl", "")])
+  let body = response_body_text(response.body, response.status)
+  parse_acl(body)
+}
+
+///|
+fn parse_acl(body : String) -> ObjectAcl {
   ObjectAcl::{
     grant: or_empty(xml_first(body, "Grant")),
     owner_id: xml_first(body, "ID"),

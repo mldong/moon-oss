@@ -56,6 +56,7 @@ pub async fn Client::list_objects(
       etag: xml_first(section, "ETag"),
       size: parse_int64(or_empty(xml_first(section, "Size"))),
       last_modified: xml_first(section, "LastModified"),
+      storage_class: xml_first(section, "StorageClass"),
     })
   }
   // `<Prefix>` 在 ListBucketResult 里也出现一次（回显请求的 prefix），而 CommonPrefixes
@@ -71,6 +72,79 @@ pub async fn Client::list_objects(
     next_continuation_token: xml_first(body, "NextContinuationToken"),
     body,
   }
+}
+
+///|
+/// 建桶。账号级动作，`bucket` 由调用方给；`acl`/`storage_class` 为空就不发对应头。
+/// 本方法不接 `moon-file-storage` 门面，误用代价由公开 API 名字自己承担。
+pub async fn Client::create_bucket(
+  self : Client,
+  bucket : String,
+  acl~ : String = "",
+  storage_class~ : String = "",
+) -> Unit raise @error.OssError {
+  if bucket.is_empty() {
+    raise @error.BadParam("create_bucket needs a bucket name")
+  }
+  let response = request(
+    self,
+    "PUT",
+    bucket,
+    extra_headers=bucket_admin_headers(acl~, storage_class~),
+  )
+  discard_body(response)
+}
+
+///|
+pub async fn Client::delete_bucket(
+  self : Client,
+  bucket : String,
+) -> Unit raise @error.OssError {
+  if bucket.is_empty() {
+    raise @error.BadParam("delete_bucket needs a bucket name")
+  }
+  let response = request(self, "DELETE", bucket)
+  discard_body(response)
+}
+
+///|
+/// 只读判断：2xx 为真，404 为假；其余错误原样抛，不把 403 读成"不存在"。
+pub async fn Client::bucket_exists(
+  self : Client,
+  bucket : String,
+) -> Bool raise @error.OssError {
+  if bucket.is_empty() {
+    raise @error.BadParam("bucket_exists needs a bucket name")
+  }
+  let response = request(self, "HEAD", bucket) catch {
+    err =>
+      match err {
+        @error.OssError::Service(details) =>
+          if details.status == 404 {
+            return false
+          } else {
+            raise err
+          }
+        _ => raise err
+      }
+  }
+  discard_body(response)
+  true
+}
+
+///|
+fn bucket_admin_headers(
+  acl~ : String,
+  storage_class~ : String,
+) -> Array[(String, String)] {
+  let headers : Array[(String, String)] = []
+  if !acl.is_empty() {
+    headers.push(("x-oss-acl", acl))
+  }
+  if !storage_class.is_empty() {
+    headers.push(("x-oss-storage-class", storage_class))
+  }
+  headers
 }
 
 ///|

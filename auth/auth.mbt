@@ -28,6 +28,38 @@ pub fn Credentials::access_key(self : Credentials) -> String {
 }
 
 ///|
+/// POST Object 的 V1 表单签名：`Base64(HMAC-SHA1(secret, Base64(policy)))`。
+/// 这是官方 PostObject 文档现读的 V1 形状；V4 表单签名（`x-oss-signature-version` 那一族）
+/// 尚未落，调用方若要 V4 需等后续代次。
+pub fn Credentials::post_policy_signature(
+  self : Credentials,
+  policy_base64 : String,
+) -> String {
+  @base64.encode(
+    @digest.hmac_sha1_of_bytes(
+      @utf8.encode(self.secret_key.view()),
+      @utf8.encode(policy_base64.view()),
+    ).exact_view(),
+  )
+}
+
+///|
+/// POST Object 的 V4 表单签名：`hex(HMAC(signing_key, Base64(policy)))`，
+/// 密钥链与请求签名共用 [signing_key]（`aliyun_v4`+SK → date → region → oss →
+/// `aliyun_v4_request`）。`date` 是 `YYYYMMDD`，与 policy 里的 `x-oss-credential` 同一段。
+pub fn Credentials::post_policy_signature_v4(
+  self : Credentials,
+  policy_base64 : String,
+  date : String,
+  region : String,
+) -> String {
+  @digest.hmac_sha256_hex_of_bytes(
+    signing_key(self.secret_key, date, region),
+    @utf8.encode(policy_base64.view()),
+  )
+}
+
+///|
 /// 用当前 UTC 时刻签一次请求（真请求走这条）。`millis` 由调用方给，
 /// 这样"注入时钟"这条路在 SDK 外面也是通的——测试与业务侧回放都靠它。
 pub fn Credentials::sign_at(

@@ -27,6 +27,7 @@ pub async fn Client::create_multipart_upload(
   key : String,
   content_type~ : String = "",
   metadata~ : Array[(String, String)] = [],
+  storage_class~ : String = "",
 ) -> String raise @error.OssError {
   let response = request(
     self,
@@ -34,7 +35,7 @@ pub async fn Client::create_multipart_upload(
     bucket,
     key~,
     query=[("uploads", "")],
-    extra_headers=object_headers(content_type~, metadata~),
+    extra_headers=object_headers(content_type~, metadata~, storage_class~),
   )
   let body = response_body_text(response.body, response.status)
   match xml_first(body, "UploadId") {
@@ -61,14 +62,20 @@ pub async fn Client::upload_part(
   upload_id : String,
   part_number : Int32,
   data : Bytes,
+  content_md5~ : String = "",
+  compute_md5~ : Bool = false,
 ) -> String raise @error.OssError {
-  if part_number < 1 || part_number > 10000 {
-    raise @error.BadParam(
-      "part number must be within 1..10000, got " + part_number.to_string(),
-    )
-  }
+  check_part_number(part_number)
   if upload_id.is_empty() {
     raise @error.BadParam("upload id is required")
+  }
+  if compute_md5 && !content_md5.is_empty() {
+    raise @error.BadParam("content_md5 and compute_md5 are mutually exclusive")
+  }
+  let md5 = if compute_md5 { content_md5_of(data) } else { content_md5 }
+  let headers : Array[(String, String)] = []
+  if !md5.is_empty() {
+    headers.push(("content-md5", md5))
   }
   let response = request(
     self,
@@ -76,6 +83,7 @@ pub async fn Client::upload_part(
     bucket,
     key~,
     query=[("partNumber", part_number.to_string()), ("uploadId", upload_id)],
+    extra_headers=headers,
     body=@transport.RequestBody::Bytes(data),
   )
   discard_body(response)
