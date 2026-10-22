@@ -2,8 +2,8 @@
 
 > 协议基线：[OSS API 参考](https://help.aliyun.com/zh/oss/developer-reference/)
 > 参考实现：`aliyun/alibabacloud-oss-go-sdk-v2@v1.6.1`（2026-10-16）；交叉核对 Java `3.18.5`（2026-01-30）
-> 本仓版本：`mldong/moon-oss@0.2.0`
-> 当前公开面：55 个 `Client::` 方法（0.2.0）
+> 本仓版本：`mldong/moon-oss@0.3.0`
+> 当前公开面：58 个 `Client::` 方法（0.3.0）
 > 状态：现有行先记 `已实现`，真桶证据待按基线逐行复核
 
 ## 1. 当前公开面
@@ -52,7 +52,8 @@
 | OSS-BKT-013 | 网站托管（Get/Put/DeleteBucketWebsite） | `get_bucket_website` `put_bucket_website` `delete_bucket_website` | P1 | 已实现 | GET 2026-10-22 真桶绿；PUT/DELETE 未跑 |
 | OSS-BKT-009 | 复制/清单（Replication/Inventory） | — | P1 | 未开始 | 复制、清单 |
 | OSS-BKT-014 | 服务端加密（Get/Put/DeleteBucketEncryption） | `get_bucket_encryption` `put_bucket_encryption` `delete_bucket_encryption` | P1 | 已实现 | GET 2026-10-22 真桶绿；PUT/DELETE 未跑 |
-| OSS-BKT-010 | 桶策略/对象锁（Policy/Object Lock） | — | P1 | 未开始 | 策略、对象锁 |
+| OSS-BKT-010 | 桶策略（Get/Put/DeleteBucketPolicy） | `get_bucket_policy` `put_bucket_policy` `delete_bucket_policy` | P1 | 部分真桶 | 读 2026-10-22 真桶绿（未配置回 None）；写只落离线件 |
+| OSS-BKT-016 | 对象锁（Object Lock） | — | P1 | 不纳入 | 官方 Go V2 基线无 Object Lock API（走 WORM 另一族） |
 | OSS-BKT-011 | 加速/自定义域/资源组（Acceleration/Custom Domain/Resource Group） | — | P1 | 未开始 | 加速、自定义域、资源组 |
 | OSS-BKT-012 | 区域/桶信息/请求者付费/QoS（Location/Info/RequestPayment/QoS） | — | P1 | 未开始 | 区域、信息、请求者付费、QoS |
 

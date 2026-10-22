@@ -353,6 +353,12 @@ async test "真桶·存储类/自动 MD5/版本与 CORS 读：自命名前缀，
         let referer = client.get_bucket_referer(bucket) catch {
           err => fail("get bucket referer: " + err.text())
         }
+        let policy = client.get_bucket_policy(bucket) catch {
+          err => fail("get bucket policy: " + err.text())
+        }
+        println(
+          "oss bucket policy configured=" + (policy is Some(_)).to_string(),
+        )
         println(
           "oss referer whitelist=" + referer.referers.length().to_string(),
         )
