@@ -2,8 +2,8 @@
 
 > 协议基线：[OSS API 参考](https://help.aliyun.com/zh/oss/developer-reference/)
 > 参考实现：`aliyun/alibabacloud-oss-go-sdk-v2@v1.6.1`（2026-10-16）；交叉核对 Java `3.18.5`（2026-01-30）
-> 本仓版本：`mldong/moon-oss@0.15.0`
-> 当前公开面：79 个 `Client::` 方法（0.14.0）
+> 本仓版本：`mldong/moon-oss@0.16.0`
+> 当前公开面：80 个 `Client::` 方法（0.16.0）
 > 状态：现有行先记 `已实现`，真桶证据待按基线逐行复核
 
 ## 1. 当前公开面
@@ -44,7 +44,7 @@
 |---|---|---|---|---|---|
 | OSS-OBJ-009 | 追加写（AppendObject） | `append_object` | P1 | 真桶已验证 | `oss/append_ops_wbtest.mbt`、`oss/live_extra_test.mbt`（2026-10-22） |
 | OSS-OBJ-010 | 软链接（Put/GetSymlink） | `put_symlink` `get_symlink` | P1 | 真桶已验证 | `oss/symlink_ops_wbtest.mbt`、`oss/live_extra_test.mbt`（2026-10-22 建链读目标、经链接取回正文） |
-| OSS-OBJ-011 | 对象内查询（SelectObject） | `select_object_csv` | P1 | 部分真桶 | 2026-10-22 真桶事件流 25 字节；只做 CSV 输入/输出与原始帧，JSON 输入与帧解码待补 |
+| OSS-OBJ-011 | 对象内查询（SelectObject） | `select_object_csv` `select_object_csv_records` `select_records` | P1 | 部分真桶 | 真桶事件流已解出 Records（按片拼接，CRC 跳过）；JSON 输入与 CRC 校验未做 |
 | OSS-BKT-006 | 桶标签（Get/Put/DeleteBucketTagging） | `get_bucket_tagging` `put_bucket_tagging` `delete_bucket_tagging` | P1 | 已实现 | GET 2026-10-22 真桶绿；PUT/DELETE 未跑 |
 | OSS-BKT-007 | 桶日志（Get/Put/DeleteBucketLogging） | `get_bucket_logging` `put_bucket_logging` `delete_bucket_logging` | P1 | 已实现 | GET 2026-10-22 真桶绿；PUT/DELETE 未跑 |
 | OSS-BKT-008 | 生命周期（Get/Put/DeleteBucketLifecycle） | `get_bucket_lifecycle` `put_bucket_lifecycle` `delete_bucket_lifecycle` | P1 | 部分真桶 | 读 2026-10-22 真桶绿（1 条规则）；写只落离线件 |
