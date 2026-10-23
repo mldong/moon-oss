@@ -70,6 +70,7 @@ pub async fn Client::copy_object(Self, String, String, String, String, metadata?
 pub async fn Client::create_bucket(Self, String, acl? : String, storage_class? : String) -> Unit raise @error.OssError
 pub async fn Client::create_multipart_upload(Self, String, String, content_type? : String, metadata? : Array[(String, String)], storage_class? : String) -> String raise @error.OssError
 pub async fn Client::delete_bucket(Self, String) -> Unit raise @error.OssError
+pub async fn Client::delete_bucket_cname(Self, String, String) -> Unit raise @error.OssError
 pub async fn Client::delete_bucket_cors(Self, String) -> Unit raise @error.OssError
 pub async fn Client::delete_bucket_encryption(Self, String) -> Unit raise @error.OssError
 pub async fn Client::delete_bucket_inventory(Self, String, String) -> Unit raise @error.OssError
@@ -99,6 +100,7 @@ pub async fn Client::get_object(Self, String, String, range? : String, if_match?
 pub async fn Client::get_object_acl(Self, String, String) -> ObjectAcl raise @error.OssError
 pub async fn Client::get_object_tagging(Self, String, String) -> ObjectTagging raise @error.OssError
 pub async fn Client::get_symlink(Self, String, String) -> SymlinkInfo raise @error.OssError
+pub async fn Client::list_bucket_cnames(Self, String) -> Array[CnameInfo] raise @error.OssError
 pub async fn Client::list_bucket_inventories(Self, String) -> Array[InventoryConfig] raise @error.OssError
 pub async fn Client::list_buckets(Self) -> BucketListing raise @error.OssError
 pub async fn Client::list_multipart_uploads(Self, String, prefix? : String, delimiter? : String, max_uploads? : Int32, key_marker? : String, upload_id_marker? : String) -> MultipartUploadListing raise @error.OssError
@@ -110,6 +112,7 @@ pub async fn Client::post_object(Self, String, String, Bytes, content_type? : St
 pub fn Client::presigned_get_url(Self, String, String, expires_sec? : Int64) -> String raise @error.OssError
 pub fn Client::presigned_put_url(Self, String, String, expires_sec? : Int64, content_type? : String) -> String raise @error.OssError
 pub async fn Client::put_bucket_acl(Self, String, String) -> Unit raise @error.OssError
+pub async fn Client::put_bucket_cname(Self, String, String) -> Unit raise @error.OssError
 pub async fn Client::put_bucket_cors(Self, String, Array[CorsRule]) -> Unit raise @error.OssError
 pub async fn Client::put_bucket_encryption(Self, String, algorithm? : String) -> Unit raise @error.OssError
 pub async fn Client::put_bucket_inventory(Self, String, InventoryConfig) -> Unit raise @error.OssError
@@ -130,6 +133,12 @@ pub async fn Client::restore_object(Self, String, String, days? : Int32, tier? :
 pub async fn Client::stat_object(Self, String, String, if_match? : String, if_none_match? : String, if_modified_since? : String, if_unmodified_since? : String) -> ObjectStat raise @error.OssError
 pub async fn Client::upload_part(Self, String, String, String, Int32, Bytes, content_md5? : String, compute_md5? : Bool) -> String raise @error.OssError
 pub async fn Client::upload_part_copy(Self, String, String, String, String, String, Int32, copy_source_range? : String, copy_source_if_match? : String, copy_source_if_none_match? : String, copy_source_if_modified_since? : String, copy_source_if_unmodified_since? : String) -> UploadPartCopyResult raise @error.OssError
+
+pub(all) struct CnameInfo {
+  domain : String
+  status : String
+  last_modified : String
+}
 
 pub(all) struct CopyResult {
   etag : String

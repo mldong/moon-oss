@@ -365,6 +365,10 @@ async test "真桶·存储类/自动 MD5/版本与 CORS 读：自命名前缀，
         let acceleration = client.get_bucket_transfer_acceleration(bucket) catch {
           err => fail("get transfer acceleration: " + err.text())
         }
+        let cnames = client.list_bucket_cnames(bucket) catch {
+          err => fail("list bucket cnames: " + err.text())
+        }
+        println("oss cnames=" + cnames.length().to_string())
         println(
           "oss transfer acceleration configured=" +
           (acceleration is Some(_)).to_string(),
