@@ -91,6 +91,7 @@ OSS 只收虚主机风格（`https://<桶>.oss-<区域>.aliyuncs.com/<键>`）�
 | 追加写／归档解冻 | `append_object` `restore_object` | 部分实现（解冻仅离线件） |
 | 表单上传 | `post_object`（V4 默认，V1 兼容） | 已实现 |
 | 软链接 | `put_symlink` `get_symlink` | 已实现 |
+| 对象内查询（CSV） | `select_object_csv`（原始事件流） | 部分实现 |
 | 桶基础 | `create_bucket` `delete_bucket` `bucket_exists` | 部分实现（建/删未跑真桶） |
 | 桶配置读 | ACL／版本／CORS／标签／日志／网站／加密／生命周期／防盗链／策略／复制／清单／传输加速／自定义域／区域／桶信息／请求者付费／资源组 | 已实现 |
 | 桶配置写 | 上述九族的 `put_*` / `delete_*` | 部分实现（只有离线件） |

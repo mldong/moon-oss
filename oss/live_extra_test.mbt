@@ -718,3 +718,35 @@ async test "真桶·翻页器：按前缀把所有对象翻完" {
     }
   }
 }
+
+///|
+async test "真桶·对象内查询 CSV：原始事件流非空" {
+  match extra_env() {
+    None => extra_skip()
+    Some(env) => {
+      let client = extra_build(env) catch {
+        err => fail("setup: " + err.text())
+      }
+      let bucket = env.3
+      let key = extra_tag() + "-select.csv"
+      let _ = client.put_object(
+        bucket,
+        key,
+        extra_bytes("name,age\nalice,30\nbob,25\n"),
+        content_type="text/csv",
+      ) catch {
+        err => fail("put csv: " + err.text())
+      }
+      let stream = client.select_object_csv(
+        bucket, key, "SELECT * FROM OSSOBJECT",
+      ) catch {
+        err => fail("select: " + err.text())
+      }
+      println("select bytes=" + stream.length().to_string())
+      extra_cleanup(client, bucket, [key])
+      if stream.length() == 0 {
+        fail("select returned an empty event stream")
+      }
+    }
+  }
+}
