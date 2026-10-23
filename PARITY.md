@@ -2,8 +2,8 @@
 
 > 协议基线：[OSS API 参考](https://help.aliyun.com/zh/oss/developer-reference/)
 > 参考实现：`aliyun/alibabacloud-oss-go-sdk-v2@v1.6.1`（2026-10-16）；交叉核对 Java `3.18.5`（2026-01-30）
-> 本仓版本：`mldong/moon-oss@0.8.0`
-> 当前公开面：76 个 `Client::` 方法（0.8.0）
+> 本仓版本：`mldong/moon-oss@0.9.0`
+> 当前公开面：76 个 `Client::` 方法（0.9.0）
 > 状态：现有行先记 `已实现`，真桶证据待按基线逐行复核
 
 ## 1. 当前公开面
