@@ -377,6 +377,10 @@ async test "真桶·存储类/自动 MD5/版本与 CORS 读：自命名前缀，
         let payer = client.get_bucket_request_payment(bucket) catch {
           err => fail("get request payment: " + err.text())
         }
+        let group = client.get_bucket_resource_group(bucket) catch {
+          err => fail("get bucket resource group: " + err.text())
+        }
+        println("oss resource group=" + group.unwrap_or("<none>"))
         println(
           "oss location=" +
           location.unwrap_or("<none>") +

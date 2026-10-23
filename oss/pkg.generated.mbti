@@ -103,6 +103,7 @@ pub async fn Client::get_bucket_policy(Self, String) -> String? raise @error.Oss
 pub async fn Client::get_bucket_referer(Self, String) -> BucketReferer raise @error.OssError
 pub async fn Client::get_bucket_replication(Self, String) -> ReplicationConfig? raise @error.OssError
 pub async fn Client::get_bucket_request_payment(Self, String) -> String? raise @error.OssError
+pub async fn Client::get_bucket_resource_group(Self, String) -> String? raise @error.OssError
 pub async fn Client::get_bucket_tagging(Self, String) -> ObjectTagging raise @error.OssError
 pub async fn Client::get_bucket_transfer_acceleration(Self, String) -> TransferAccelerationConfig? raise @error.OssError
 pub async fn Client::get_bucket_versioning(Self, String) -> String? raise @error.OssError
@@ -133,6 +134,7 @@ pub async fn Client::put_bucket_policy(Self, String, String) -> Unit raise @erro
 pub async fn Client::put_bucket_referer(Self, String, BucketReferer) -> Unit raise @error.OssError
 pub async fn Client::put_bucket_replication(Self, String, ReplicationConfig) -> Unit raise @error.OssError
 pub async fn Client::put_bucket_request_payment(Self, String, String) -> Unit raise @error.OssError
+pub async fn Client::put_bucket_resource_group(Self, String, String) -> Unit raise @error.OssError
 pub async fn Client::put_bucket_tagging(Self, String, Array[ObjectTag]) -> Unit raise @error.OssError
 pub async fn Client::put_bucket_transfer_acceleration(Self, String, TransferAccelerationConfig) -> Unit raise @error.OssError
 pub async fn Client::put_bucket_versioning(Self, String, String) -> Unit raise @error.OssError
