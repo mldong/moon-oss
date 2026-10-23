@@ -76,7 +76,7 @@ OSS 只收虚主机风格（`https://<桶>.oss-<区域>.aliyuncs.com/<键>`）�
 |---|---|---|
 | 上传 / 下载 / 删除 / 存在 | `put_object` `get_object` `delete_object` `stat_object` | 已实现 |
 | 用户元数据读写 | `metadata~`（`x-oss-meta-*`，写了能读回） | 已实现 |
-| 单层列举 | `list_objects`（前缀／分隔符／续页） | 已实现 |
+| 单层列举／翻页 | `list_objects`、`list_all_objects`（自动翻到底） | 已实现 |
 | 手动分片五步 | `create_multipart_upload` `upload_part` `list_parts` `complete_multipart_upload` `abort_multipart_upload` | 已实现 |
 | 预签名 GET 与 PUT | `presigned_get_url` `presigned_put_url` | 已实现 |
 | 同平台复制 | `copy_object`（移动＝复制＋`delete_object`） | 已实现 |

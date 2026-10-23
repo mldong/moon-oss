@@ -112,6 +112,7 @@ pub async fn Client::get_object(Self, String, String, range? : String, if_match?
 pub async fn Client::get_object_acl(Self, String, String) -> ObjectAcl raise @error.OssError
 pub async fn Client::get_object_tagging(Self, String, String) -> ObjectTagging raise @error.OssError
 pub async fn Client::get_symlink(Self, String, String) -> SymlinkInfo raise @error.OssError
+pub async fn Client::list_all_objects(Self, String, prefix? : String, delimiter? : String, max_keys? : Int32, max_pages? : Int32) -> ObjectListing raise @error.OssError
 pub async fn Client::list_bucket_cnames(Self, String) -> Array[CnameInfo] raise @error.OssError
 pub async fn Client::list_bucket_inventories(Self, String) -> Array[InventoryConfig] raise @error.OssError
 pub async fn Client::list_buckets(Self) -> BucketListing raise @error.OssError

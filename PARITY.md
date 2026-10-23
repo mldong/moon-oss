@@ -2,8 +2,8 @@
 
 > 协议基线：[OSS API 参考](https://help.aliyun.com/zh/oss/developer-reference/)
 > 参考实现：`aliyun/alibabacloud-oss-go-sdk-v2@v1.6.1`（2026-10-16）；交叉核对 Java `3.18.5`（2026-01-30）
-> 本仓版本：`mldong/moon-oss@0.11.0`
-> 当前公开面：77 个 `Client::` 方法（0.11.0）
+> 本仓版本：`mldong/moon-oss@0.13.0`
+> 当前公开面：78 个 `Client::` 方法（0.13.0）
 > 状态：现有行先记 `已实现`，真桶证据待按基线逐行复核
 
 ## 1. 当前公开面
@@ -59,7 +59,7 @@
 | OSS-BKT-018 | 自定义域（List/Put/DeleteCname） | `list_bucket_cnames` `put_bucket_cname` `delete_bucket_cname` | P1 | 部分真桶 | 读 2026-10-22 真桶绿（1 条 CNAME）；写只落离线件 |
 | OSS-BKT-019 | 资源组（Get/PutBucketResourceGroup） | `get_bucket_resource_group` `put_bucket_resource_group` | P1 | 部分真桶 | 读 2026-10-22 真桶绿（rg-acfmw…）；写只落离线件 |
 | OSS-BKT-012 | 区域/桶信息/请求者付费（Location/Info/RequestPayment） | `get_bucket_location` `get_bucket_info` `get_bucket_request_payment` `put_bucket_request_payment` | P1 | 部分真桶 | 三项读 2026-10-22 真桶绿（location/region=oss-cn-zhangjiakou、payer=BucketOwner）；写只落离线件 |
-| OSS-BKT-020 | QoS | — | P1 | 未开始 | QoS 未做 |
+| OSS-BKT-020 | QoS | — | P1 | 不纳入 | 官方 Go V2 基线无 QoS 方法 |
 
 ### P2 · 便利/安全层
 
@@ -67,7 +67,7 @@
 |---|---|---|---|
 | OSS-SEC-001 | STS 临时凭据（`x-oss-security-token`） | 部分实现 | `Credentials::with_security_token` 已接请求头；**预签名 URL 暂不支持**（显式拒）；缺 STS 凭据未真桶 |
 | OSS-CNV-001 | 一条式自动分片 | `put_bytes_auto` | 部分真桶 | 2026-10-22 真桶绿（阈值触发分片并回收原对象）；断点续传/进度回调未做 |
-| OSS-CNV-002 | TransferManager / 分页器 / 重试策略 | 未开始 | 与官方 SDK 的高层入口对齐 |
+| OSS-CNV-002 | TransferManager / 分页器 / 重试策略 | 部分实现 | `list_all_objects` 翻页器已落并真桶绿；进度回调/断点续传未做，重试是操作级重发 |
 
 ### P3 · 可选模块
 
