@@ -95,8 +95,8 @@ OSS 只收虚主机风格（`https://<桶>.oss-<区域>.aliyuncs.com/<键>`）�
 | 桶基础 | `create_bucket` `delete_bucket` `bucket_exists` | 部分实现（建/删未跑真桶） |
 | 桶配置读 | ACL／版本／CORS／标签／日志／网站／加密／生命周期／防盗链／策略／复制／清单／传输加速／自定义域／区域／桶信息／请求者付费／资源组 | 已实现 |
 | 桶配置写 | 上述九族的 `put_*` / `delete_*` | 部分实现（只有离线件） |
-| 大文件"一条式"上传（自动切分片） | `put_bytes_auto`（超阈值自动切分片，失败回收） | 已实现 |
-| 上传进度回调／断点续传 | 无对应件（`put_bytes_auto` 只做自动切分片） | 待开发 |
+| 大文件"一条式"上传（自动切分片） | `put_bytes_auto`（超阈值自动切分片，失败回收，`progress~` 按片回调） | 已实现 |
+| 断点续传 | 无对应件（进度回调已在 `put_bytes_auto`） | 待开发 |
 | STS 临时凭据（`x-oss-security-token`） | `Credentials::with_security_token`（请求头；预签名暂不支持） | 部分实现 |
 
 完整对标台账（官方基线、P0–P3、逐项证据）：[PARITY.md](PARITY.md)。
