@@ -2,8 +2,8 @@
 
 > 协议基线：[OSS API 参考](https://help.aliyun.com/zh/oss/developer-reference/)
 > 参考实现：`aliyun/alibabacloud-oss-go-sdk-v2@v1.6.1`（2026-10-16）；交叉核对 Java `3.18.5`（2026-01-30）
-> 本仓版本：`mldong/moon-oss@0.17.0`
-> 当前公开面：80 个 `Client::` 方法（0.16.0）
+> 本仓版本：`mldong/moon-oss@0.18.0`
+> 当前公开面：81 个 `Client::` 方法（0.18.0）
 > 状态：现有行先记 `已实现`，真桶证据待按基线逐行复核
 
 ## 1. 当前公开面
@@ -66,7 +66,7 @@
 | ID | 能力 | 状态 | 备注 |
 |---|---|---|---|
 | OSS-SEC-001 | STS 临时凭据（`x-oss-security-token`） | 部分实现 | 请求头 + 预签名查询串（`security-token`）都已接；缺 STS 凭据未真桶 |
-| OSS-CNV-001 | 一条式自动分片 + 进度回调 | `put_bytes_auto`（`progress~` 按片回调） | 部分真桶 | 真桶绿（分片与回调触发均验证）；断点续传未做 |
+| OSS-CNV-001 | 自动分片 + 进度 + 断点续传 | `put_bytes_auto` `put_bytes_resumable`（可外部持久化的分片状态） | 部分真桶 | 2026-10-24 真桶绿（先传第一片再带状态续完）；TransferManager 整体未做 |
 | OSS-CNV-002 | TransferManager / 分页器 / 重试策略 | 部分实现 | `list_all_objects` 翻页器已落并真桶绿；进度回调/断点续传未做，重试是操作级重发 |
 
 ### P3 · 可选模块
