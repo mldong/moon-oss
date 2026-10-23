@@ -35,7 +35,7 @@ jobs:
     env:
       # 10-22 夜从 24 抬到 78：批删/标签/分片复制列举/PostObject V1/条件/自动 MD5/CRC64/
       # 存储类/桶 CRUD/ACL/版本/CORS/归档解冻/桶标签/桶日志/网站托管/桶加密/追加写/生命周期/防盗链/软链接的离线件与六条 live 腿。
-      EXPECTED_TESTS: "90"
+      EXPECTED_TESTS: "91"
     steps:
       - uses: actions/checkout@v4
 

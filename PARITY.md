@@ -2,8 +2,8 @@
 
 > 协议基线：[OSS API 参考](https://help.aliyun.com/zh/oss/developer-reference/)
 > 参考实现：`aliyun/alibabacloud-oss-go-sdk-v2@v1.6.1`（2026-10-16）；交叉核对 Java `3.18.5`（2026-01-30）
-> 本仓版本：`mldong/moon-oss@0.9.0`
-> 当前公开面：76 个 `Client::` 方法（0.9.0）
+> 本仓版本：`mldong/moon-oss@0.10.0`
+> 当前公开面：77 个 `Client::` 方法（0.10.0）
 > 状态：现有行先记 `已实现`，真桶证据待按基线逐行复核
 
 ## 1. 当前公开面
@@ -66,7 +66,7 @@
 | ID | 能力 | 状态 | 备注 |
 |---|---|---|---|
 | OSS-SEC-001 | STS 临时凭据（`x-oss-security-token`） | 未开始 | `Credentials` 现只有永久密钥 |
-| OSS-CNV-001 | 自动分片 / 断点续传 / 进度回调 | 未开始 | 高层 helper，不塞进核心 Client |
+| OSS-CNV-001 | 一条式自动分片 | `put_bytes_auto` | 部分真桶 | 2026-10-22 真桶绿（阈值触发分片并回收原对象）；断点续传/进度回调未做 |
 | OSS-CNV-002 | TransferManager / 分页器 / 重试策略 | 未开始 | 与官方 SDK 的高层入口对齐 |
 
 ### P3 · 可选模块

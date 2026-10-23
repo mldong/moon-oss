@@ -139,6 +139,7 @@ pub async fn Client::put_bucket_tagging(Self, String, Array[ObjectTag]) -> Unit 
 pub async fn Client::put_bucket_transfer_acceleration(Self, String, TransferAccelerationConfig) -> Unit raise @error.OssError
 pub async fn Client::put_bucket_versioning(Self, String, String) -> Unit raise @error.OssError
 pub async fn Client::put_bucket_website(Self, String, String, error_key? : String) -> Unit raise @error.OssError
+pub async fn Client::put_bytes_auto(Self, String, String, Bytes, part_size? : Int32, threshold? : Int32, content_type? : String, compute_md5? : Bool) -> PutObjectResult raise @error.OssError
 pub async fn Client::put_object(Self, String, String, Bytes, content_type? : String, metadata? : Array[(String, String)], acl? : String, storage_class? : String, content_md5? : String, compute_md5? : Bool, if_match? : String, if_none_match? : String, forbid_overwrite? : Bool) -> PutObjectResult raise @error.OssError
 pub async fn Client::put_object_acl(Self, String, String, String) -> Unit raise @error.OssError
 pub async fn Client::put_object_tagging(Self, String, String, Array[ObjectTag]) -> Unit raise @error.OssError
