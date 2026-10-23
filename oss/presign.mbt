@@ -38,14 +38,13 @@ fn Client::presigned_url(
   expires_sec~ : Int64 = 600L,
   content_type~ : String = "",
 ) -> String raise @error.OssError {
-  match self.config.credentials().security_token() {
-    Some(_) =>
-      raise @error.BadParam(
-        "STS security tokens are not supported in presigned URLs yet",
-      )
-    None => ()
-  }
   let config = self.config
+  // STS 令牌走查询串：OSS 预签名的 V4 查询签名把 `security-token` 计入规范查询块。
+  let token_query : Array[(String, String)] = match
+    config.credentials().security_token() {
+    Some(token) => [("security-token", token)]
+    None => []
+  }
   let timestamp = @auth.iso8601_basic(@auth.now_millis())
   let headers : Array[(String, String)] = if content_type.is_empty() {
     []
@@ -57,7 +56,7 @@ fn Client::presigned_url(
     .presign_at(config.region_of(), timestamp, expires_sec, @auth.RequestToSign::{
       verb,
       canonical_uri: config.canonical_uri_of(bucket, key~),
-      query: [],
+      query: token_query,
       headers,
     })
   config.url_of(bucket, key~) + "?" + signed.query
