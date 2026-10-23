@@ -18,6 +18,10 @@ async fn request(
   body~ : @transport.RequestBody = @transport.RequestBody::Empty,
 ) -> @transport.Response raise @error.OssError {
   let config = client.config
+  let extra_headers = match config.credentials().security_token() {
+    Some(token) => extra_headers + [("x-oss-security-token", token)]
+    None => extra_headers
+  }
   let millis = @auth.now_millis()
   let timestamp = @auth.iso8601_basic(millis)
   let signed_headers : Array[(String, String)] = @auth.required_headers(

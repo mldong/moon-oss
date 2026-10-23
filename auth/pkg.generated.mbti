@@ -44,13 +44,16 @@ pub fn uri_encode(String, keep_slash? : Bool) -> String
 pub struct Credentials {
   access_key : String
   secret_key : String
+  security_token : String?
 }
 pub fn Credentials::access_key(Self) -> String
 pub fn Credentials::new(String, String) -> Self raise @error.OssError
 pub fn Credentials::post_policy_signature(Self, String) -> String
 pub fn Credentials::post_policy_signature_v4(Self, String, String, String) -> String
 pub fn Credentials::presign_at(Self, String, String, Int64, RequestToSign) -> PresignedUrl raise @error.OssError
+pub fn Credentials::security_token(Self) -> String?
 pub fn Credentials::sign_at(Self, String, Int64, RequestToSign) -> Signature raise @error.OssError
+pub fn Credentials::with_security_token(Self, String) -> Self
 
 pub(all) struct HeaderBlock {
   block : String

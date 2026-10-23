@@ -38,6 +38,13 @@ fn Client::presigned_url(
   expires_sec~ : Int64 = 600L,
   content_type~ : String = "",
 ) -> String raise @error.OssError {
+  match self.config.credentials().security_token() {
+    Some(_) =>
+      raise @error.BadParam(
+        "STS security tokens are not supported in presigned URLs yet",
+      )
+    None => ()
+  }
   let config = self.config
   let timestamp = @auth.iso8601_basic(@auth.now_millis())
   let headers : Array[(String, String)] = if content_type.is_empty() {

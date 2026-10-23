@@ -96,7 +96,7 @@ OSS 只收虚主机风格（`https://<桶>.oss-<区域>.aliyuncs.com/<键>`）�
 | 桶配置写 | 上述九族的 `put_*` / `delete_*` | 部分实现（只有离线件） |
 | 大文件"一条式"上传（自动切分片） | `put_bytes_auto`（超阈值自动切分片，失败回收） | 已实现 |
 | 上传进度回调／断点续传 | 无对应件（`put_bytes_auto` 只做自动切分片） | 待开发 |
-| STS 临时凭据（`x-oss-security-token`） | 无对应件，`Credentials` 只有永久密钥两把 | 待开发 |
+| STS 临时凭据（`x-oss-security-token`） | `Credentials::with_security_token`（请求头；预签名暂不支持） | 部分实现 |
 
 完整对标台账（官方基线、P0–P3、逐项证据）：[PARITY.md](PARITY.md)。
 
