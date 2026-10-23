@@ -368,6 +368,23 @@ async test "真桶·存储类/自动 MD5/版本与 CORS 读：自命名前缀，
         let cnames = client.list_bucket_cnames(bucket) catch {
           err => fail("list bucket cnames: " + err.text())
         }
+        let location = client.get_bucket_location(bucket) catch {
+          err => fail("get bucket location: " + err.text())
+        }
+        let info = client.get_bucket_info(bucket) catch {
+          err => fail("get bucket info: " + err.text())
+        }
+        let payer = client.get_bucket_request_payment(bucket) catch {
+          err => fail("get request payment: " + err.text())
+        }
+        println(
+          "oss location=" +
+          location.unwrap_or("<none>") +
+          " bucket_region=" +
+          info.region.unwrap_or("<none>") +
+          " payer=" +
+          payer.unwrap_or("<none>"),
+        )
         println("oss cnames=" + cnames.length().to_string())
         println(
           "oss transfer acceleration configured=" +
